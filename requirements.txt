@@ -1,0 +1,9 @@
+boto3
+couchbase
+packaging
+paramiko
+progressbar2
+tabulate
+termcolor
+troposphere
+wget

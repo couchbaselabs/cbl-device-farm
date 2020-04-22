@@ -1,0 +1,3 @@
+[submodule "couchbase-cli"]
+	path = couchbase-cli
+	url = https://github.com/couchbase/couchbase-cli
