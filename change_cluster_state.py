@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from query_cluster import get_aws_instances, AWSState, AWSInstance
 from typing import List
 from utils import ensure_min_python_version
+from configure import Configuration, SettingKeyNames
 
 ensure_min_python_version()
 
@@ -48,12 +49,15 @@ def stop_cluster(aws_instances: List[AWSInstance], region: str):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
+    config = Configuration()
+    config.load()
+
     parser.add_argument("keyname", action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
     parser.add_argument("state", action="store", type=lambda s: AWSState[s], choices=list(AWSState),
                         help="The state to set the cluster into")
     parser.add_argument("--region",
-                        action="store", type=str, dest="region", default="us-east-1",
+                        action="store", type=str, dest="region", default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region (default %(default)s)")
 
     args = parser.parse_args()

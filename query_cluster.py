@@ -6,6 +6,8 @@ import sys
 from enum import Enum
 from argparse import ArgumentParser
 from utils import ensure_min_python_version
+from tabulate import tabulate
+from configure import Configuration, SettingKeyNames
 
 ensure_min_python_version()
 
@@ -89,6 +91,9 @@ def get_aws_instances(state: AWSState, keyName: str, region: str):
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="query_cluster")
+    config = Configuration()
+    config.load()
+
     parser.add_argument("keyname",
                         action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
@@ -96,7 +101,7 @@ if __name__ == "__main__":
                         action="store", type=lambda s: AWSState[s], choices=list(AWSState),
                         help="The state of the instances to be found")
     parser.add_argument("--region",
-                        action="store", type=str, dest="region", default="us-east-1",
+                        action="store", type=str, dest="region", default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
 
     args = parser.parse_args()
@@ -105,6 +110,14 @@ if __name__ == "__main__":
         print("No instances found!")
         sys.exit(0)
 
+    print()
     print("Found the following instances:")
-    for i in instances:
-        print("\t{}".format(i))
+    print()
+    if args.state == AWSState.STOPPED:
+        columns = ["Name", "Id"]
+        data = list([x.name, x.id] for x in instances)
+        print(tabulate(data, headers=columns))
+    else:
+        columns = ["Name", "Id", "Public Address", "Private Address"]
+        data = list([x.name, x.id, x.address, x.internal_address] for x in instances)
+        print(tabulate(data, headers=columns))

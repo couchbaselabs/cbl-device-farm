@@ -13,7 +13,7 @@ import sys
 ensure_min_python_version()
 
 
-def uninstall_couchbase_server(ec2_keyname: str, server_prefix: str, region: str, ssh_keyfile: str):
+def uninstall_sync_gateway(ec2_keyname: str, server_prefix: str, region: str, ssh_keyfile: str):
     instances = list(filter(lambda x: x.name.startswith(server_prefix),
                      get_aws_instances(AWSState.RUNNING, ec2_keyname, region)))
     futures = []
@@ -26,12 +26,12 @@ def uninstall_couchbase_server(ec2_keyname: str, server_prefix: str, region: str
         ssh_client.load_system_host_keys()
         ssh_client.set_missing_host_key_policy(WarningPolicy())
         ssh_connect(ssh_client, instance.address, ssh_keyfile)
-        exit_code = ssh_command(ssh_client, instance.address, "sudo yum erase -y couchbase-server.x86_64")
+        exit_code = ssh_command(ssh_client, instance.address, "sudo yum erase -y couchbase-sync-gateway.x86_64")
         ssh_client.close()
         return exit_code
 
     results = []
-    with ThreadPoolExecutor(thread_name_prefix="cb_install") as tp:
+    with ThreadPoolExecutor(thread_name_prefix="sg_install") as tp:
         for instance in instances:
             futures.append(tp.submit(_uninstall_worker, instance, ssh_keyfile))
 
@@ -42,7 +42,7 @@ def uninstall_couchbase_server(ec2_keyname: str, server_prefix: str, region: str
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(prog="uninstall_couchbase_server")
+    parser = ArgumentParser(prog="uninstall_sync_gateway")
     config = Configuration()
     config.load()
 
@@ -51,10 +51,10 @@ if __name__ == "__main__":
     parser.add_argument("--region", action="store", type=str, dest="region",
                         default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
-    parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="couchbaseserver",
+    parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="syncgateway",
                         help="The name of the server to use to reset the Couchbase cluster (default %(default)s)")
     parser.add_argument("--ssh-key", action="store", type=str, dest="sshkey",
                         help="The key to connect to EC2 instances")
     args = parser.parse_args()
 
-    sys.exit(uninstall_couchbase_server(args.keyname, args.servername, args.region, args.sshkey))
+    sys.exit(uninstall_sync_gateway(args.keyname, args.servername, args.region, args.sshkey))

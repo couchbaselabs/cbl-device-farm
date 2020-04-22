@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from configure import Configuration, NotConfiguredException, SettingKeyNames
+from configure import Configuration, SettingKeyNames
 from pathlib import Path
 from paramiko import SSHClient, WarningPolicy
 from ssh_utils import ssh_connect, ssh_command, sftp_upload
@@ -41,9 +41,7 @@ class SyncGatewayInstaller:
 
     def __init__(self, url: str, ssh_keyfile: str):
         self.__config = Configuration()
-        if not self.__config.load():
-            raise NotConfiguredException()
-
+        self.__config.load()
         self.__raw_version = self.__config[SettingKeyNames.SG_VERSION]
         self.__url = url
         self.__ssh_keyfile = ssh_keyfile
@@ -134,9 +132,13 @@ def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: s
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="install_sync_gateway")
+    config = Configuration()
+    config.load()
+
     parser.add_argument("keyname", action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
-    parser.add_argument("--region", action="store", type=str, dest="region", default="us-east-1",
+    parser.add_argument("--region", action="store", type=str, dest="region",
+                        default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
     parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="couchbaseserver",
                         help="The prefix of the server(s) to use for Couchbase Server (default %(default)s)")

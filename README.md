@@ -8,7 +8,30 @@ This implementation uses the Couchbase Python SDK, and so the [requirements](htt
 
 Also, you must run `git submodule update --init` after cloning to pick up the couchbase-cli.
 
+In addition to the technical prerequisites, there are some knowledge prerequisites.  You must be familiar with how to log into the AWS console and create key pairs.  The examples below all make copious use of the name of an AWS key pair that you need to create in advance.  You must also have this private key available on the system that runs these scripts, as this will be the main method of authentication for many operations.  Once you have a key pair created, you will use the name of the key pair anywhere you see "keyname" below, and the corresponding private key where you see an option to provide an SSH key file.  
+
 ## Examples
+
+## Set Configuration Options
+
+```
+usage: configure [-h] {verify,set,clear,get} ...
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+actions:
+  Valid actions (omit for interactive)
+
+  {verify,set,clear,get}
+                        Actions that this program is able to perform
+```
+
+Configure the default settings to use for some of the options that the various scripts use.  Including, but not limited to:
+
+- Version of Couchbase Server to install
+- Version of Sync Gateway to install
+- Region of AWS to use
 
 ## Create an EC2 Stack
 ---

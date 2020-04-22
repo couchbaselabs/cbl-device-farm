@@ -9,6 +9,7 @@ from ssh_utils import ssh_command, ssh_connect
 from install_sync_gateway import deploy_sg_config
 from typing import List
 from utils import ensure_min_python_version
+from configure import Configuration, SettingKeyNames
 
 ensure_min_python_version()
 
@@ -58,13 +59,17 @@ def change_sync_gateway(url: str, ssh_keyfile: str, start: bool):
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="reset_cluster")
+    config = Configuration()
+    config.load()
+
     parser.add_argument("keyname", action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
     parser.add_argument("cbuser", action="store", type=str,
                         help="The user to authenticate with when resetting the server")
     parser.add_argument("cbpass", action="store", type=str,
                         help="The password to authenticate with when resetting the server")
-    parser.add_argument("--region", action="store", type=str, dest="region", default="us-east-1",
+    parser.add_argument("--region", action="store", type=str, dest="region",
+                        default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
     parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="couchbaseserver",
                         help="The prefix of the Couchbase Server nodes in EC2 (default %(default)s)")

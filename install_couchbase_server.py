@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from packaging.version import Version, InvalidVersion
-from configure import Configuration, NotConfiguredException, SettingKeyNames
+from configure import Configuration, SettingKeyNames
 from pathlib import Path
 from query_cluster import get_aws_instances, AWSState, AWSInstance
 from argparse import ArgumentParser
@@ -65,9 +65,7 @@ class CouchbaseServerInstaller:
 
     def __init__(self, url: str, ssh_keyfile: str):
         self.__config = Configuration()
-        if not self.__config.load():
-            raise NotConfiguredException()
-
+        self.__config.load()
         self.__raw_version = self.__config[SettingKeyNames.CBS_VERSION]
         self.__url = url
         self.__ssh_keyfile = ssh_keyfile
@@ -200,9 +198,13 @@ def get_node_count(instance: AWSInstance, username: str, password: str):
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="install_couchbase_server")
+    config = Configuration()
+    config.load()
+    
     parser.add_argument("keyname", action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
-    parser.add_argument("--region", action="store", type=str, dest="region", default="us-east-1",
+    parser.add_argument("--region", action="store", type=str, dest="region",
+                        default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
     parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="couchbaseserver",
                         help="The name of the server to use to reset the Couchbase cluster (default %(default)s)")

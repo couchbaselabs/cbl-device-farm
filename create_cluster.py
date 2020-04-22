@@ -6,6 +6,7 @@ import boto3
 from argparse import ArgumentParser
 from cloud_formation import gen_template
 from utils import ensure_min_python_version
+from configure import Configuration, SettingKeyNames
 
 ensure_min_python_version()
 
@@ -122,6 +123,9 @@ def create_and_instantiate_cluster(config):
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="create_cluster")
+    config = Configuration()
+    config.load()
+
     parser.add_argument("stackname",
                         action="store", type=str,
                         help="name for your cluster")
@@ -143,7 +147,7 @@ if __name__ == "__main__":
                         action="store", type=str, dest="sync_gateway_type", default="m3.medium",
                         help="EC2 instance type for sync_gateway type (default: %(default)s)")
     parser.add_argument("--region",
-                        action="store", type=str, dest="region", default="us-east-1",
+                        action="store", type=str, dest="region", default=config.get(SettingKeyNames.AWS_REGION),
                         help="The AWS region to use (default: %(default)s)")
 
     args = parser.parse_args()
