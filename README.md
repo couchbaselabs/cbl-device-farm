@@ -34,7 +34,6 @@ Configure the default settings to use for some of the options that the various s
 - Region of AWS to use
 
 ## Create an EC2 Stack
----
 
 ```
 usage: create_cluster [-h] [--num-servers NUM_SERVERS]
@@ -68,7 +67,6 @@ Create an EC2 stack named "device-farm" using the keyname "jborden" for SSH acce
 `./create_cluster.py device-farm jborden --num-servers=3 --server-type=m3.large --num-sync-gateways=1`
 
 ## Install Couchbase Server
----
 
 ```
 usage: install_couchbase_server [-h] [--region REGION]
@@ -95,7 +93,6 @@ Install Couchbase Server to all the instances in EC2 that are setup with the "jb
 `./install_couchbase_server.py jborden --ssh-key ~/.ssh/aws_jborden.pem`
 
 ## Install Sync Gateway
----
 
 ```
 usage: install_sync_gateway [-h] [--region REGION]
@@ -126,7 +123,6 @@ optional arguments:
   `./install_sync_gateway.py jborden --ssh-key ~/.ssh/aws_jborden.pem`
 
   ## Reset Cluster State
-  ---
 
   ```
   usage: reset_cluster [-h] [--region REGION] [--server-name-prefix SERVERNAME]
@@ -167,7 +163,6 @@ optional arguments:
   `./reset_cluster.py jborden bucket_manager bucket --ssh-key=$HOME/.ssh/aws_jborden.pem`
 
 ## Start Up / Shut Down EC2 Cluster
----
 
 ```
 usage: change_cluster_state.py [-h] [--region REGION]
@@ -187,7 +182,6 @@ optional arguments:
   `./change_cluster_state.py jborden STOPPED`
 
   ## Find Instance
-  ---
 
   ```
   usage: query_cluster [-h] [--region REGION] keyname {STOPPED,RUNNING}
