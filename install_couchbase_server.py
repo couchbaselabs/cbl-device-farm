@@ -71,12 +71,17 @@ class CouchbaseServerInstaller:
         self.__ssh_keyfile = ssh_keyfile
         (self.__version, self.__build) = CouchbaseServerInstaller._parse_version(self.__raw_version)
 
-    def install(self):
+    def download(self):
         filename = CouchbaseServerInstaller._generate_filename(self.__version, self.__build)
         if not Path(filename).exists():
             print("Downloading Couchbase Server {}...".format(self.__raw_version))
             url = self._generate_download_url(self.__version, self.__build, filename)
             wget.download(url, filename)
+
+    def install(self):
+        filename = CouchbaseServerInstaller._generate_filename(self.__version, self.__build)
+        if not Path(filename).exists():
+            raise Exception("Unable to find installer, please call download first")
 
         print("Installing Couchbase Server to {}...".format(self.__url))
         ssh_client = SSHClient()
@@ -135,7 +140,7 @@ def initialize_couchbase_cluster(instance: AWSInstance, username: str, password:
         "--cluster-ramsize", "4096",
         "--cluster-index-ramsize", "1024",
         "--cluster-name", "device-farm"
-    ])
+    ], instance.name)
 
     print("Setting hostname to {}...".format(instance.internal_address))
     _run_cli_command([
@@ -144,7 +149,7 @@ def initialize_couchbase_cluster(instance: AWSInstance, username: str, password:
         "-u", username,
         "-p", password,
         "--node-init-hostname", instance.internal_address
-    ])
+    ], instance.name)
 
 
 def add_server_nodes(cluster: AWSInstance, nodes: List[AWSInstance], cluster_user: str,
@@ -180,7 +185,7 @@ def rebalance_cluster(instance: AWSInstance, username: str, password: str):
         "-c", instance.address,
         "-u", username,
         "-p", password
-    ])
+    ], instance.name)
 
 
 def get_node_count(instance: AWSInstance, username: str, password: str):
@@ -192,7 +197,11 @@ def get_node_count(instance: AWSInstance, username: str, password: str):
         "-o", "json"
     ])
 
-    result = json.loads(process.stdout.read())
+    process.wait()
+    if process.returncode != 0:
+        return 0
+
+    result = json.loads(process.stdout.readlines()[-1])
     return len(result["nodes"])
 
 
@@ -216,10 +225,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    def _install_worker(instance: AWSInstance, ssh_keyfile: str):
-        installer = CouchbaseServerInstaller(instance.address, ssh_keyfile)
-        installer.install()
-
     futures = []
     instances = list(filter(lambda x: x.name.startswith(args.servername),
                      get_aws_instances(AWSState.RUNNING, args.keyname, args.region)))
@@ -232,7 +237,9 @@ if __name__ == "__main__":
     if not args.setuponly:
         with ThreadPoolExecutor(thread_name_prefix="cb_install") as tp:
             for instance in instances:
-                futures.append(tp.submit(_install_worker, instance, args.sshkey))
+                installer = CouchbaseServerInstaller(instance.address, args.sshkey)
+                installer.download()  # Make sure only one does the downloading
+                futures.append(tp.submit(lambda i: i.install(), installer))
 
             for f in futures:
                 f.result()

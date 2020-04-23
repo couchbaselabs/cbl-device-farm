@@ -47,12 +47,17 @@ class SyncGatewayInstaller:
         self.__ssh_keyfile = ssh_keyfile
         (self.__version, self.__build) = SyncGatewayInstaller._parse_version(self.__raw_version)
 
-    def install(self):
+    def download(self):
         filename = SyncGatewayInstaller._generate_filename(self.__version, self.__build)
         if not Path(filename).exists():
             print("Downloading Sync Gateway {}...".format(self.__raw_version))
             url = self._generate_download_url(self.__version, self.__build, filename)
             wget.download(url, filename)
+
+    def install(self):
+        filename = SyncGatewayInstaller._generate_filename(self.__version, self.__build)
+        if not Path(filename).exists():
+            raise Exception("Unable to find installer, please call download first")
 
         print("Installing Sync Gateway to {}...".format(self.__url))
         ssh_client = SSHClient()
@@ -153,10 +158,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    def _install_worker(instance: AWSInstance, ssh_keyfile: str):
-        installer = SyncGatewayInstaller(instance.address, ssh_keyfile)
-        installer.install()
-
     futures = []
     instances = get_aws_instances(AWSState.RUNNING, args.keyname, args.region)
     sg_instances = list(filter(lambda x: x.name.startswith(args.sgname), instances))
@@ -168,7 +169,9 @@ if __name__ == "__main__":
     if not args.setuponly:
         with ThreadPoolExecutor(thread_name_prefix="sg_install") as tp:
             for instance in sg_instances:
-                futures.append(tp.submit(_install_worker, instance, args.sshkey))
+                installer = SyncGatewayInstaller(instance.address, args.sshkey)
+                installer.download()  # Make sure only one does the downloading
+                futures.append(tp.submit(lambda i: i.install(), installer))
 
             for f in futures:
                 f.result()
