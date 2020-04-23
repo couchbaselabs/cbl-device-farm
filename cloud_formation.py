@@ -157,7 +157,7 @@ def gen_template(config) -> dict:
 
     # Couchbase Server Instances
     for i in range(num_couchbase_servers):
-        name = "couchbaseserver{}".format(i)
+        name = "{}{}".format(config.couchbase_server_prefix, i)
         instance = ec2.Instance(name)
         instance.ImageId = "ami-6d1c2007"  # centos7
         instance.InstanceType = couchbase_instance_type
@@ -179,7 +179,7 @@ def gen_template(config) -> dict:
 
     # Sync Gw instances (ubuntu ami)
     for i in range(num_sync_gateway_servers):
-        name = "syncgateway{}".format(i)
+        name = "{}{}".format(config.sync_gateway_prefix, i)
         instance = ec2.Instance(name)
         instance.ImageId = "ami-6d1c2007"  # centos7
         instance.InstanceType = sync_gateway_server_type

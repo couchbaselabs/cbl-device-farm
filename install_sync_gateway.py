@@ -140,9 +140,11 @@ if __name__ == "__main__":
     parser.add_argument("--region", action="store", type=str, dest="region",
                         default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
-    parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername", default="couchbaseserver",
+    parser.add_argument("--server-name-prefix", action="store", type=str, dest="servername",
+                        default=config.get(SettingKeyNames.CBS_SERVER_PREFIX),
                         help="The prefix of the server(s) to use for Couchbase Server (default %(default)s)")
-    parser.add_argument("--sg-name-prefix", action="store", type=str, dest="sgname", default="syncgateway",
+    parser.add_argument("--sg-name-prefix", action="store", type=str, dest="sgname",
+                        default=config.get(SettingKeyNames.SG_SERVER_PREFIX),
                         help="The prefix of the server(s) to use for Sync Gateway (default %(default)s)")
     parser.add_argument("--ssh-key", action="store", type=str, dest="sshkey",
                         help="The key to connect to EC2 instances")

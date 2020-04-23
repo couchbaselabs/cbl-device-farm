@@ -31,6 +31,8 @@ class SettingKeyNames(Enum):
     CBS_VERSION = "cbs_version"
     SG_VERSION = "sg_version"
     AWS_REGION = "aws_region"
+    CBS_SERVER_PREFIX = "cbs_server_prefix"
+    SG_SERVER_PREFIX = "sg_server_prefix"
 
     def __str__(self):
         return self.value
@@ -49,7 +51,11 @@ class SettingKey:
             SettingKey(SettingKeyNames.CBS_VERSION, "Couchbase Server Version", SettingKeyType.STRING_INPUT, "6.5.0"),
             SettingKey(SettingKeyNames.SG_VERSION, "Sync Gateway Version", SettingKeyType.STRING_INPUT, "2.7.2"),
             SettingKey(SettingKeyNames.AWS_REGION, "Default region of AWS to use", SettingKeyType.STRING_INPUT,
-                       "us-east-1")
+                       "us-east-1"),
+            SettingKey(SettingKeyNames.CBS_SERVER_PREFIX, "The prefix to use when creating Couchbase Server instances",
+                       SettingKeyType.STRING_INPUT, "couchbaseserver"),
+            SettingKey(SettingKeyNames.SG_SERVER_PREFIX, "The prefix to use when creating Sync Gateway instances",
+                       SettingKeyType.STRING_INPUT, "syncgateway")
         ]
 
     @staticmethod

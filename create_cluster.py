@@ -16,7 +16,7 @@ BUCKET_FOLDER = "device-farm"
 
 class ClusterConfig:
     def __init__(self, name, keyname, server_number, server_type, sync_gateway_number,
-                 sync_gateway_type, region):
+                 sync_gateway_type, region, cbs_prefix, sg_prefix):
 
         self.__name = name
         self.__keyname = keyname
@@ -25,6 +25,8 @@ class ClusterConfig:
         self.__sync_gateway_number = sync_gateway_number
         self.__sync_gateway_type = sync_gateway_type
         self.__region = region
+        self.__cbs_prefix = cbs_prefix
+        self.__sg_prefx = sg_prefix
 
     @property
     def name(self):
@@ -53,6 +55,14 @@ class ClusterConfig:
     @property
     def region(self):
         return self.__region
+
+    @property
+    def couchbase_server_prefix(self):
+        return self.__cbs_prefix
+
+    @property
+    def sync_gateway_prefix(self):
+        return self.__sg_prefx
 
     def __validate_types(self):
         # Ec2 instances follow string format xx.xxxx
@@ -126,29 +136,27 @@ if __name__ == "__main__":
     config = Configuration()
     config.load()
 
-    parser.add_argument("stackname",
-                        action="store", type=str,
+    parser.add_argument("stackname", action="store", type=str,
                         help="name for your cluster")
     parser.add_argument("keyname", action="store", type=str,
                         help="The EC2 keyname to install on all the instances")
-    parser.add_argument("--num-servers",
-                        action="store", type=int, dest="num_servers", default=0,
+    parser.add_argument("--num-servers", action="store", type=int, dest="num_servers", default=0,
                         help="number of couchbase server instances")
-
-    parser.add_argument("--server-type",
-                        action="store", type=str, dest="server_type", default="m3.medium",
+    parser.add_argument("--server-type", action="store", type=str, dest="server_type", default="m3.medium",
                         help="EC2 instance type for couchbase server (default: %(default)s)")
-
-    parser.add_argument("--num-sync-gateways",
-                        action="store", type=int, dest="num_sync_gateways", default=0,
+    parser.add_argument("--num-sync-gateways", action="store", type=int, dest="num_sync_gateways", default=0,
                         help="number of sync_gateway instances")
-
-    parser.add_argument("--sync-gateway-type",
-                        action="store", type=str, dest="sync_gateway_type", default="m3.medium",
+    parser.add_argument("--sync-gateway-type", action="store", type=str, dest="sync_gateway_type", default="m3.medium",
                         help="EC2 instance type for sync_gateway type (default: %(default)s)")
-    parser.add_argument("--region",
-                        action="store", type=str, dest="region", default=config.get(SettingKeyNames.AWS_REGION),
+    parser.add_argument("--region", action="store", type=str, dest="region",
+                        default=config.get(SettingKeyNames.AWS_REGION),
                         help="The AWS region to use (default: %(default)s)")
+    parser.add_argument("--server-prefix", action="store", type=str, dest="serverprefix",
+                        default=config.get(SettingKeyNames.CBS_SERVER_PREFIX),
+                        help="The prefix to use when naming EC2 instances for Couchbase Server (default: %(default)s)")
+    parser.add_argument("--sync-gateway-prefix", action="store", type=str, dest="sgprefix",
+                        default=config.get(SettingKeyNames.SG_SERVER_PREFIX),
+                        help="The prefix to use when naming EC2 instances for Sync Gateway (default: %(default)s)")
 
     args = parser.parse_args()
 
@@ -160,7 +168,9 @@ if __name__ == "__main__":
         args.server_type,
         args.num_sync_gateways,
         args.sync_gateway_type,
-        args.region
+        args.region,
+        args.serverprefix,
+        args.sgprefix
     )
 
     if not cluster_config.is_valid():
