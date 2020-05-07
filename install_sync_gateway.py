@@ -99,7 +99,7 @@ def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: s
         },
         "databases": {
             "db": {
-                "server": "couchbase://{}".format(cb_node.address),
+                "server": "couchbase://{}".format(cb_node.internal_address),
                 "username": "sg",
                 "password": "letmein",
                 "bucket": "device-farm-data",
@@ -109,7 +109,7 @@ def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: s
             }
         },
         "interface": "0.0.0.0:4984",
-        "adminInterface": "{}:4985".format(instance.internal_address)
+        "adminInterface": "{}:4985".format(instance.private_ip)
     }
 
     config_filename = "{}_config.json".format(instance.name)

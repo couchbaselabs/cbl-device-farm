@@ -20,33 +20,47 @@ class AWSState(Enum):
         return self.name
 
 
-class AWSInstance:
-    __name: str
-    __id: str
-    __address: str
-    __internal_address: str
+class AWSInstanceKeys(Enum):
+    NAME = "Name"
+    ID = "Id"
+    PUBLIC_ADDRESS = "Address"
+    PRIVATE_ADDRESS = "PrivateAddress"
+    PUBLIC_IP = "Ip"
+    PRIVATE_IP = "PrivateIp"
 
-    def __init__(self, name: str, id: str, address: str, internal_address: str):
-        self.__name = name
-        self.__id = id
-        self.__address = address
-        self.__internal_address = internal_address
+    def __str__(self):
+        return self.value
+
+
+class AWSInstance:
+    __data: dict
+
+    def __init__(self, data: dict):
+        self.__data = data
 
     @property
     def name(self):
-        return self.__name
+        return self.__data.get(str(AWSInstanceKeys.NAME))
 
     @property
     def id(self):
-        return self.__id
+        return self.__data.get(str(AWSInstanceKeys.ID))
 
     @property
     def address(self):
-        return self.__address
+        return self.__data.get(str(AWSInstanceKeys.PUBLIC_ADDRESS))
 
     @property
     def internal_address(self):
-        return self.__internal_address
+        return self.__data.get(str(AWSInstanceKeys.PRIVATE_ADDRESS))
+
+    @property
+    def ip(self):
+        return self.__data.get(str(AWSInstanceKeys.PUBLIC_IP))
+
+    @property
+    def private_ip(self):
+        return self.__data.get(str(AWSInstanceKeys.PRIVATE_IP))
 
     def __str__(self):
         if self.address is not None:
@@ -71,20 +85,21 @@ def get_aws_instances(state: AWSState, keyName: str, region: str):
     for reservation in raw_output["Reservations"]:
         for instance in reservation["Instances"]:
             next_result = {
-                "Id": instance["InstanceId"]
+                str(AWSInstanceKeys.ID): instance["InstanceId"]
             }
 
             if state == AWSState.RUNNING:
-                next_result["Address"] = instance["PublicDnsName"]
-                next_result["PrivateAddress"] = instance["PrivateDnsName"]
+                next_result[str(AWSInstanceKeys.PUBLIC_ADDRESS)] = instance["PublicDnsName"]
+                next_result[str(AWSInstanceKeys.PRIVATE_ADDRESS)] = instance["PrivateDnsName"]
+                next_result[str(AWSInstanceKeys.PUBLIC_IP)] = instance["PublicIpAddress"]
+                next_result[str(AWSInstanceKeys.PRIVATE_IP)] = instance["PrivateIpAddress"]
 
             for tag in instance["Tags"]:
                 if tag["Key"] == "Name":
-                    next_result["Name"] = tag["Value"]
+                    next_result[str(AWSInstanceKeys.NAME)] = tag["Value"]
                     break
 
-            output.append(AWSInstance(next_result["Name"], next_result["Id"], next_result.get("Address"),
-                          next_result.get("PrivateAddress")))
+            output.append(AWSInstance(next_result))
 
     return output
 
@@ -118,6 +133,6 @@ if __name__ == "__main__":
         data = list([x.name, x.id] for x in instances)
         print(tabulate(data, headers=columns))
     else:
-        columns = ["Name", "Id", "Public Address", "Private Address"]
-        data = list([x.name, x.id, x.address, x.internal_address] for x in instances)
+        columns = ["Name", "Id", "Public Address", "Public IP", "Private Address", "Private IP"]
+        data = list([x.name, x.id, x.address, x.ip, x.internal_address, x.private_ip] for x in instances)
         print(tabulate(data, headers=columns))
