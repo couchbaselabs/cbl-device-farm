@@ -18,6 +18,7 @@ import sys
 import os
 import subprocess
 import json
+import time
 
 ensure_min_python_version()
 
@@ -131,16 +132,24 @@ def _start_cli_command(command: List[str]):
 
 def initialize_couchbase_cluster(instance: AWSInstance, username: str, password: str):
     print("Initializing {} with a new cluster...".format(instance.name))
-    _run_cli_command([
-        "cluster-init",
-        "-c", cluster_init_node.address,
-        "--cluster-username", username,
-        "--cluster-password", password,
-        "--services",  "data,index,query",
-        "--cluster-ramsize", "4096",
-        "--cluster-index-ramsize", "1024",
-        "--cluster-name", "device-farm"
-    ], instance.name)
+    for i in range(5):
+        retcode = _run_cli_command([
+            "cluster-init",
+            "-c", cluster_init_node.address,
+            "--cluster-username", username,
+            "--cluster-password", password,
+            "--services",  "data,index,query",
+            "--cluster-ramsize", "4096",
+            "--cluster-index-ramsize", "1024",
+            "--cluster-name", "device-farm"
+        ], instance.name)
+
+        if retcode == 0:
+            break
+
+        print(colored("Failed to initialize cluster, retrying in 2 seconds ({} attempts remaining)...".format(5 - i),
+                      "yellow"))
+        time.sleep(2)
 
     print("Setting hostname to {}...".format(instance.internal_address))
     _run_cli_command([
@@ -205,6 +214,45 @@ def get_node_count(instance: AWSInstance, username: str, password: str):
     return len(result["nodes"])
 
 
+def wait_for_healthy_nodes(instance: AWSInstance, username: str, password: str):
+    NUM_ATTEMPTS = 5
+    for i in range(NUM_ATTEMPTS):
+        print("Checking for healthy nodes, attempt {} of {}...".format(i + 1, NUM_ATTEMPTS))
+        process = _start_cli_command([
+            "server-list",
+            "-c", instance.address,
+            "-u", username,
+            "-p", password
+        ])
+
+        process.wait()
+        if process.returncode != 0:
+            raise Exception("Failed to get server list from cluster!")
+
+        ready = True
+        for line in process.stdout:
+            if line[:2] != "ns_":
+                continue
+
+            components = line.split(' ')
+            if components[2] != "healthy":
+                print(colored("{} is not healthy ({})".format(components[0], components[2]), "yellow"))
+                ready = False
+
+        if ready:
+            print("...All nodes healthy")
+            break
+
+        for s in range(5):
+            print(".", end="")
+            time.sleep(1)
+
+        print()
+
+    if not ready:
+        raise Exception("Server nodes failed to become healthy!")
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(prog="install_couchbase_server")
     config = Configuration()
@@ -251,6 +299,7 @@ if __name__ == "__main__":
         print("Things look normal, exiting!")
         sys.exit(0)
 
+
     # Pick the first in the list to be the cluster init node
     cluster_init_node = instances[0]
     initialize_couchbase_cluster(cluster_init_node, "Administrator", "Couchbase123")
@@ -258,3 +307,5 @@ if __name__ == "__main__":
     # Add the rest to the cluster
     add_server_nodes(cluster_init_node, instances[1:], "Administrator", "Couchbase123", "Administrator", "Couchbase123")
     rebalance_cluster(cluster_init_node, "Administrator", "Couchbase123")
+
+    wait_for_healthy_nodes(instances[0], "Administrator", "Couchbase123")
