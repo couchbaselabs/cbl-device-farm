@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
 from packaging.version import Version, InvalidVersion
-from configure import Configuration, SettingKeyNames
 from pathlib import Path
-from query_cluster import get_aws_instances, AWSState, AWSInstance
 from argparse import ArgumentParser
 from paramiko import SSHClient, WarningPolicy
-from ssh_utils import ssh_connect, sftp_upload, ssh_command
 from concurrent.futures import ThreadPoolExecutor
 from subprocess import PIPE, STDOUT
 from typing import List
 from termcolor import colored
 from utils import ensure_min_python_version
+from configure import Configuration, SettingKeyNames
+from credential import Credential, CredentialName
+from ssh_utils import ssh_connect, sftp_upload, ssh_command
+from query_cluster import get_aws_instances, AWSState, AWSInstance
 
 import wget
 import sys
@@ -270,6 +271,11 @@ if __name__ == "__main__":
                         help="The key to connect to EC2 instances")
     parser.add_argument("--setup-only", action="store_true", dest="setuponly",
                         help="Skip the program installation, and configure only")
+    parser.add_argument("--username", action="store", default=config.get(SettingKeyNames.CBS_ADMIN),
+                        help="The administrator username for Couchbase Server (default %(default)s)")
+    parser.add_argument("--password", action="store",
+                        help="The administrator password for Couchbase Server (If not provided, " +
+                        "run credential.py for information on how it is resolved)")
 
     args = parser.parse_args()
 
@@ -294,18 +300,19 @@ if __name__ == "__main__":
     else:
         print("Skipping program installation, continuing to setup...")
 
-    num_nodes = get_node_count(instances[0], "Administrator", "Couchbase123")
+    couchbase_pw = Credential("Couchbase Server password", args.password, str(CredentialName.CM_CBS_PASS), args.keyname)
+    num_nodes = get_node_count(instances[0], args.username, str(couchbase_pw))
     if num_nodes == num_instances:
         print("Things look normal, exiting!")
         sys.exit(0)
 
-
     # Pick the first in the list to be the cluster init node
     cluster_init_node = instances[0]
-    initialize_couchbase_cluster(cluster_init_node, "Administrator", "Couchbase123")
+    initialize_couchbase_cluster(cluster_init_node, args.username, str(couchbase_pw))
 
     # Add the rest to the cluster
-    add_server_nodes(cluster_init_node, instances[1:], "Administrator", "Couchbase123", "Administrator", "Couchbase123")
-    rebalance_cluster(cluster_init_node, "Administrator", "Couchbase123")
+    add_server_nodes(cluster_init_node, instances[1:], args.username, str(couchbase_pw), args.username,
+                     str(couchbase_pw))
+    rebalance_cluster(cluster_init_node, args.username, str(couchbase_pw))
 
-    wait_for_healthy_nodes(instances[0], "Administrator", "Couchbase123")
+    wait_for_healthy_nodes(instances[0], args.username, str(couchbase_pw))

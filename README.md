@@ -33,6 +33,14 @@ Configure the default settings to use for some of the options that the various s
 - Version of Sync Gateway to install
 - Region of AWS to use
 
+## Managing sensitive credentials
+
+To maximize flexibility, there are a number of ways that these scripts can acquire passwords.  The easiest way is to pass them as a command line option.  However, each password also has a corresponding variable name (run ./credential.py to see a list).  For example, if the variable name is CM_MY_PASSWORD then the following logic is used to resolve the credential if one is not passed on the command line:
+
+1. Check for the environment variable CM_MY_PASSWORD
+1. If the python [keyring](https://pypi.org/project/keyring/) module is installed, check the default system keystore for an entry with the service name CM_MY_PASSWORD, and a username matching the `keyname` required argument found on most commands.
+1. Interactive password prompt
+
 ## Create an EC2 Stack
 
 ```
@@ -72,6 +80,7 @@ Create an EC2 stack named "device-farm" using the keyname "jborden" for SSH acce
 usage: install_couchbase_server [-h] [--region REGION]
                                 [--server-name-prefix SERVERNAME]
                                 [--ssh-key SSHKEY] [--setup-only]
+                                [--username USERNAME] [--password PASSWORD]
                                 keyname
 
 positional arguments:
@@ -86,6 +95,11 @@ optional arguments:
                         cluster (default couchbaseserver)
   --ssh-key SSHKEY      The key to connect to EC2 instances
   --setup-only          Skip the program installation, and configure only
+  --username USERNAME   The administrator username for Couchbase Server
+                        (default Administrator)
+  --password PASSWORD   The administrator password for Couchbase Server (If
+                        not provided, run credential.py for information on how
+                        it is resolved)
   ```
 
 Install Couchbase Server to all the instances in EC2 that are setup with the "jborden" key and whose name starts with couchbaseserver (default), using the provided private key to connect.  If `--setup-only` is passed then installation is skipped and the cluster is checked to make sure that all nodes are reported correctly (i.e. The number of nodes reported by Couchbase Server is the same as the number of found instances) and fixed if needed.
@@ -125,18 +139,15 @@ optional arguments:
   ## Reset Cluster State
 
   ```
-  usage: reset_cluster [-h] [--region REGION] [--server-name-prefix SERVERNAME]
+usage: reset_cluster [-h] [--region REGION] [--server-name-prefix SERVERNAME]
                      [--bucket-name BUCKETNAME] [--sg-name-prefix SGNAME]
-                     [--ssh-key SSHKEY]
-                     keyname cbuser cbpass
+                     [--ssh-key SSHKEY] [--username USERNAME]
+                     [--password PASSWORD]
+                     keyname
 
 positional arguments:
   keyname               The name of the SSH key that the EC2 instances are
                         using
-  cbuser                The user to authenticate with when resetting the
-                        server
-  cbpass                The password to authenticate with when resetting the
-                        server
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -151,6 +162,11 @@ optional arguments:
                         The prefix of the Sync Gateway instance names in EC2
                         (default syncgateway)
   --ssh-key SSHKEY      The key to connect to EC2 instances
+  --username USERNAME   The administrator username for Couchbase Server
+                        (default Administrator)
+  --password PASSWORD   The administrator password for Couchbase Server (If
+                        not provided, run credential.py for information on how
+                        it is resolved)
   ```
 
   The following command will perform these steps:
@@ -160,7 +176,7 @@ optional arguments:
   1. Flush the device-farm-data bucket (default) using the provided Couchbase Server RBAC username and password (bucket_manager / bucket)
   1. Connect to the previous sync gateway nodes again and copy a new config file pointing to the reset Couchbase cluster, and start the Sync Gateway service using the new config
 
-  `./reset_cluster.py jborden bucket_manager bucket --ssh-key=$HOME/.ssh/aws_jborden.pem`
+  `./reset_cluster.py jborden --ssh-key=$HOME/.ssh/aws_jborden.pem`
 
 ## Start Up / Shut Down EC2 Cluster
 

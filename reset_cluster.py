@@ -10,6 +10,7 @@ from install_sync_gateway import deploy_sg_config
 from typing import List
 from utils import ensure_min_python_version
 from configure import Configuration, SettingKeyNames
+from credential import CredentialName, Credential
 
 ensure_min_python_version()
 
@@ -64,10 +65,6 @@ if __name__ == "__main__":
 
     parser.add_argument("keyname", action="store", type=str,
                         help="The name of the SSH key that the EC2 instances are using")
-    parser.add_argument("cbuser", action="store", type=str,
-                        help="The user to authenticate with when resetting the server")
-    parser.add_argument("cbpass", action="store", type=str,
-                        help="The password to authenticate with when resetting the server")
     parser.add_argument("--region", action="store", type=str, dest="region",
                         default=config.get(SettingKeyNames.AWS_REGION),
                         help="The EC2 region to query (default %(default)s)")
@@ -81,6 +78,11 @@ if __name__ == "__main__":
                         help="The prefix of the Sync Gateway instance names in EC2 (default %(default)s)")
     parser.add_argument("--ssh-key", action="store", type=str, dest="sshkey",
                         help="The key to connect to EC2 instances")
+    parser.add_argument("--username", action="store", default=config.get(SettingKeyNames.CBS_ADMIN),
+                        help="The administrator username for Couchbase Server (default %(default)s)")
+    parser.add_argument("--password", action="store",
+                        help="The administrator password for Couchbase Server (If not provided, " +
+                        "run credential.py for information on how it is resolved)")
 
     args = parser.parse_args()
     all_instances = get_aws_instances(AWSState.RUNNING, args.keyname, args.region)
@@ -96,11 +98,13 @@ if __name__ == "__main__":
         change_sync_gateway(sg.address, args.sshkey, False)
 
     if len(cb_instances) > 0:
-        set_alternate_hostnames(cb_instances, args.sshkey, "Administrator", "Couchbase123")
+        couchbase_pw = Credential("Couchbase Server password", args.password, str(CredentialName.CM_CBS_PASS),
+                                  args.keyname)
+        set_alternate_hostnames(cb_instances, args.sshkey, args.username, str(couchbase_pw))
         cb_cluster_url = cb_instances[0].address
         print("Connecting to couchbase://{}:8091".format(cb_cluster_url))
         cluster = Cluster("couchbase://{}:8091".format(cb_cluster_url))
-        authenticator = PasswordAuthenticator(args.cbuser, args.cbpass)
+        authenticator = PasswordAuthenticator(args.username, str(couchbase_pw))
         cluster.authenticate(authenticator)
         reset_couchbase_cluster(cluster, args.bucketname)
     else:
