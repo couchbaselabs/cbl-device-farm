@@ -113,3 +113,5 @@ dmypy.json
 *.rpm
 .vscode/
 client/ObjC/Frameworks/CouchbaseLite.framework/
+*.xcuserstate
+client/Android/gradle/wrapper/
