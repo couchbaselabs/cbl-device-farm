@@ -112,3 +112,4 @@ dmypy.json
 .DS_Store
 *.rpm
 .vscode/
+client/ObjC/Frameworks/CouchbaseLite.framework/

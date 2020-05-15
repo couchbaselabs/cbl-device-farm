@@ -34,6 +34,8 @@ class SettingKeyNames(Enum):
     CBS_SERVER_PREFIX = "cbs_server_prefix"
     SG_SERVER_PREFIX = "sg_server_prefix"
     CBS_ADMIN = "cbs_admin"
+    DEVICE_FARM_IOS_POOL = "device_farm_ios_pool"
+    DEVICE_FARM_ANDROID_POOL = "device_farm_android_pool"
 
     def __str__(self):
         return self.value
@@ -60,7 +62,13 @@ class SettingKey:
                        SettingKeyType.STRING_INPUT, "Administrator"),
             SettingKey(SettingKeyNames.SG_SERVER_PREFIX,
                        "The prefix to use when finding / creating Sync Gateway instances",
-                       SettingKeyType.STRING_INPUT, "syncgateway")
+                       SettingKeyType.STRING_INPUT, "syncgateway"),
+            SettingKey(SettingKeyNames.DEVICE_FARM_IOS_POOL,
+                       "The name of iOS device pool to use with the device farm project",
+                       SettingKeyType.STRING_INPUT, "iOS Pool"),
+            SettingKey(SettingKeyNames.DEVICE_FARM_ANDROID_POOL,
+                       "The name of Android device pool to use with the device farm project",
+                       SettingKeyType.STRING_INPUT, "Android Pool")
         ]
 
     @staticmethod

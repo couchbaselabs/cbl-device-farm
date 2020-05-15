@@ -214,3 +214,46 @@ optional arguments:
   The following command will return information about instances in the `RUNNING` state that use the "jborden" EC2 key pair.
 
   `./query_cluster.py jborden RUNNING`
+
+
+  ## Start a Device Farm Run
+
+  ```
+  usage: run_device_farm_test [-h] [--region REGION] [--sg-name-prefix SGNAME]
+                            [--skip-s3-upload] [--ios-pool IOSPOOL]
+                            [--android-pool ANDROIDPOOL] [--dry-run]
+                            keyname project_name {ios,android}
+
+positional arguments:
+  keyname               The name of the SSH key that the EC2 instances are
+                        using
+  project_name          The name of the device farm project to run
+  {ios,android}         The platform to run the test on
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --region REGION       The EC2 region to query (default us-east-1)
+  --sg-name-prefix SGNAME
+                        The prefix of the Sync Gateway instance names in EC2
+                        (default syncgateway)
+  --skip-s3-upload      If set, don't upload the SG address to S3
+  --ios-pool IOSPOOL    The name of the iOS device pool to use with the
+                        project (default iOS Pool)
+  --android-pool ANDROIDPOOL
+                        The name of the iOS device pool to use with the
+                        project (default Android Pool)
+  --dry-run             Only fetch the properties needed to schedule a run,
+                        without scheduling it
+  ```
+
+The requirement here is that you have gone through all the proper steps to bring up the EC2 instances by using the previous commands.  This command will run the provided test against the first sync gateway found in the EC2 instances that use the provided keyname on the provided platform (ios or android).  It does so with the following steps:
+
+1. Find the URL of the Sync Gateway instance (skipped with `--skip-s3-upload`)
+1. Upload the URL to a text file in a publicly accessible S3 location (skipped with `--skip-s3-upload`)
+1. Send a schedule run request to AWS using the provided project name, the latest uploaded app artifact, the latest uploaded test artifact, and the provided device pool name.
+
+**NOTE**: The `--region` argument only applies to looking for Sync Gateway.  The device farm region is hardcoded to us-west-2 (the only region in which it seems possible for me to create a device farm test anyway)
+
+The following command will start a project called "CBL Mass Replication" for iOS using a Sync Gateway with the "jborden" key:
+
+`./run_device_farm_test.py jborden "CBL Mass Replication" ios`

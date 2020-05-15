@@ -2,6 +2,7 @@
 
 import sys
 import boto3
+from constants import S3_BUCKET_NAME, S3_BUCKET_FOLDER
 
 from argparse import ArgumentParser
 from cloud_formation import gen_template
@@ -9,9 +10,6 @@ from utils import ensure_min_python_version
 from configure import Configuration, SettingKeyNames
 
 ensure_min_python_version()
-
-BUCKET_NAME = "cbmobile-bucket"
-BUCKET_FOLDER = "device-farm"
 
 
 class ClusterConfig:
@@ -120,14 +118,14 @@ def create_and_instantiate_cluster(config):
 
     print(("Uploading {} to s3".format(template_file_name)))
     s3 = boto3.resource("s3", region_name=config.region)
-    s3.Bucket(BUCKET_NAME).put_object(Key="{}/{}".format(BUCKET_FOLDER, template_file_name), Body=templ_json)
+    s3.Bucket(S3_BUCKET_NAME).put_object(Key="{}/{}".format(S3_BUCKET_FOLDER, template_file_name), Body=templ_json)
 
     # Create Stack
     print(("Creating cloudformation stack: {}".format(template_file_name)))
     cf = boto3.resource("cloudformation", region_name=config.region)
     cf.create_stack(StackName=config.name, Capabilities=["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"],
                     TemplateURL="http://{}.s3.amazonaws.com/{}/{}"
-                    .format(BUCKET_NAME, BUCKET_FOLDER, template_file_name),
+                    .format(S3_BUCKET_NAME, S3_BUCKET_FOLDER, template_file_name),
                     Parameters=[{"ParameterKey": "KeyName", "ParameterValue": config.keyname}])
 
 

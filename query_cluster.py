@@ -39,30 +39,30 @@ class AWSInstance:
         self.__data = data
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.NAME))
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.ID))
 
     @property
-    def address(self):
+    def address(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.PUBLIC_ADDRESS))
 
     @property
-    def internal_address(self):
+    def internal_address(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.PRIVATE_ADDRESS))
 
     @property
-    def ip(self):
+    def ip(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.PUBLIC_IP))
 
     @property
-    def private_ip(self):
+    def private_ip(self) -> str:
         return self.__data.get(str(AWSInstanceKeys.PRIVATE_IP))
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.address is not None:
             return "{} ({}) @ {} ({})".format(self.name, self.id, self.address, self.internal_address)
 
