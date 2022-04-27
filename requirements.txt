@@ -1,7 +1,7 @@
 boto3
 couchbase
 packaging
-paramiko==2.8
+paramiko==2.10.1
 progressbar2
 tabulate
 termcolor
