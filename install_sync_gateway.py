@@ -3,6 +3,7 @@
 from configure import Configuration, SettingKeyNames
 from pathlib import Path
 from paramiko import SSHClient, WarningPolicy
+from credential import Credential, CredentialName
 from ssh_utils import ssh_connect, ssh_command, sftp_upload
 from argparse import ArgumentParser
 from query_cluster import get_aws_instances, AWSState, AWSInstance
@@ -22,7 +23,8 @@ class SyncGatewayInstaller:
     __version: str
     __build: str
     __raw_version: str
-    __ssh_keyfile: str
+    __ssh_keyfile: str 
+    __ssh_keypass: Credential
 
     @staticmethod
     def _parse_version(version: str):
@@ -39,12 +41,13 @@ class SyncGatewayInstaller:
 
         return "couchbase-sync-gateway-enterprise_{}-{}_x86_64.rpm".format(version, build)
 
-    def __init__(self, url: str, ssh_keyfile: str):
+    def __init__(self, url: str, ssh_keyfile: str, keypass: Credential):
         self.__config = Configuration()
         self.__config.load()
         self.__raw_version = self.__config[SettingKeyNames.SG_VERSION]
         self.__url = url
         self.__ssh_keyfile = ssh_keyfile
+        self.__ssh_keypass = keypass
         (self.__version, self.__build) = SyncGatewayInstaller._parse_version(self.__raw_version)
 
     def download(self):
@@ -63,7 +66,7 @@ class SyncGatewayInstaller:
         ssh_client = SSHClient()
         ssh_client.load_system_host_keys()
         ssh_client.set_missing_host_key_policy(WarningPolicy())
-        ssh_connect(ssh_client, self.__url, self.__ssh_keyfile)
+        ssh_connect(ssh_client, self.__url, self.__ssh_keyfile, str(self.__ssh_keypass))
         (_, stdout, _) = ssh_client.exec_command("test -f {}".format(filename))
         if stdout.channel.recv_exit_status() == 0:
             print("Install file already present on remote host, skipping upload...")
@@ -86,7 +89,7 @@ class SyncGatewayInstaller:
                 version, filename)
 
 
-def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: str):
+def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: str, keypass: Credential):
     template = {
         "logging": {
             "log_file_path": "/var/tmp/sglogs",
@@ -105,7 +108,9 @@ def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: s
                 "bucket": "device-farm-data",
                 "users": {"GUEST": {"disabled": False, "admin_channels": ["*"]}},
                 "allow_conflicts": False,
-                "revs_limit": 20
+                "revs_limit": 20,
+                "enable_shared_bucket_access": True,
+                "import_docs": "continuous"
             }
         },
         "interface": "0.0.0.0:4984",
@@ -119,7 +124,7 @@ def deploy_sg_config(instance: AWSInstance, cb_node: AWSInstance, ssh_keyfile: s
     ssh_client = SSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.set_missing_host_key_policy(WarningPolicy())
-    ssh_connect(ssh_client, instance.address, ssh_keyfile)
+    ssh_connect(ssh_client, instance.address, ssh_keyfile, str(keypass))
     ssh_command(ssh_client, instance.name, "sudo systemctl stop sync_gateway")
 
     sftp = ssh_client.open_sftp()
@@ -166,10 +171,12 @@ if __name__ == "__main__":
         print("No instances found, nothing to do!")
         sys.exit(0)
 
+    
+    keypass = Credential("SSH Key Password", None, str(CredentialName.CM_SSHKEY_PASS), args.keyname)
     if not args.setuponly:
         with ThreadPoolExecutor(thread_name_prefix="sg_install") as tp:
             for instance in sg_instances:
-                installer = SyncGatewayInstaller(instance.address, args.sshkey)
+                installer = SyncGatewayInstaller(instance.address, args.sshkey, keypass)
                 installer.download()  # Make sure only one does the downloading
                 futures.append(tp.submit(lambda i: i.install(), installer))
 
@@ -182,7 +189,7 @@ if __name__ == "__main__":
     futures = []
     with ThreadPoolExecutor(thread_name_prefix="sg_install") as tp:
         for instance in sg_instances:
-            futures.append(tp.submit(deploy_sg_config, instance, cb_node, args.sshkey))
+            futures.append(tp.submit(deploy_sg_config, instance, cb_node, args.sshkey, keypass))
 
         for f in futures:
             f.result()

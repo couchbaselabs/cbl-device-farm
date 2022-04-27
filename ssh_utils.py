@@ -16,23 +16,8 @@ def sftp_upload(sftp: SFTPClient, filename: str, remote_filename: str):
     progress.finish()
 
 
-def ssh_connect(client: SSHClient, url: str, ssh_keyfile: str, limit: int = 3):
-    def ssh_connect_inner(client: SSHClient, url: str, ssh_keyfile: str, attempts: int, limit: int):
-        try:
-            client.connect(url, username="centos", key_filename=ssh_keyfile)
-        except PasswordRequiredException:
-            try:
-                client.connect(url, username="centos", key_filename=ssh_keyfile,
-                               passphrase=getpass("Enter key password: "))
-            except SSHException as e:
-                attempts = attempts + 1
-                if e.args[0] != 'Could not deserialize key data.' or attempts >= limit:
-                    raise
-
-                print("Password incorrect...")
-                ssh_connect_inner(client, url, ssh_keyfile, attempts, limit)
-
-    ssh_connect_inner(client, url, ssh_keyfile, 0, limit)
+def ssh_connect(client: SSHClient, url: str, ssh_keyfile: str, keypass: str):
+    client.connect(url, username="centos", key_filename=ssh_keyfile, passphrase=keypass)
 
 
 def ssh_command(client: SSHClient, remote_name: str, command: str):

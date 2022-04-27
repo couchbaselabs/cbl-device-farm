@@ -26,7 +26,7 @@ def gen_template(config) -> dict:
     sync_gateway_server_type = config.sync_gateway_type
 
     t = Template()
-    t.add_description(
+    t.set_description(
         'An Ec2-classic stack with Couchbase Server + Sync Gateway'
     )
 

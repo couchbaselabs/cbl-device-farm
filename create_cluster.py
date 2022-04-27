@@ -175,5 +175,4 @@ if __name__ == "__main__":
         print("Invalid cluster configuration. Exiting...")
         sys.exit(1)
 
-    sys.exit(0)
     create_and_instantiate_cluster(cluster_config)

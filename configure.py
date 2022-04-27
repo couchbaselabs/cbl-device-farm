@@ -42,7 +42,6 @@ class SettingKeyNames(Enum):
 
 
 class SettingKey:
-    __data: dict
     __keyname: str
     __description: str
     __setting_type: SettingKeyType
@@ -51,8 +50,8 @@ class SettingKey:
     @staticmethod
     def all_keys():
         return [
-            SettingKey(SettingKeyNames.CBS_VERSION, "Couchbase Server Version", SettingKeyType.STRING_INPUT, "6.5.0"),
-            SettingKey(SettingKeyNames.SG_VERSION, "Sync Gateway Version", SettingKeyType.STRING_INPUT, "2.7.2"),
+            SettingKey(SettingKeyNames.CBS_VERSION, "Couchbase Server Version", SettingKeyType.STRING_INPUT, "7.1.0"),
+            SettingKey(SettingKeyNames.SG_VERSION, "Sync Gateway Version", SettingKeyType.STRING_INPUT, "2.8.2"),
             SettingKey(SettingKeyNames.AWS_REGION, "Default region of AWS to use", SettingKeyType.STRING_INPUT,
                        "us-east-1"),
             SettingKey(SettingKeyNames.CBS_SERVER_PREFIX,
@@ -102,11 +101,16 @@ class SettingKey:
 
 
 class Configuration:
+    __data: dict
+
     @staticmethod
     def _get_config_file():
         config_folder = Path.home() / "cluster_management"
         config_folder.mkdir(mode=0o755, exist_ok=True)
         return config_folder / "config.json"
+
+    def __init__(self):
+        self.__data = {}
 
     def load(self):
         config_file = Configuration._get_config_file()
@@ -206,12 +210,6 @@ def _do_interactive_setup(config: Configuration):
 
     config.save()
     return 0
-
-
-def _verify_config(config: Configuration):
-    print()
-    print(config)
-
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="configure")

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from getpass import getpass
+from urllib import request
 from packaging.version import Version, InvalidVersion
 from pathlib import Path
 from argparse import ArgumentParser
@@ -7,6 +9,7 @@ from paramiko import SSHClient, WarningPolicy
 from concurrent.futures import ThreadPoolExecutor
 from subprocess import PIPE, STDOUT
 from typing import List
+from paramiko.pkey import PKey
 from termcolor import colored
 from utils import ensure_min_python_version
 from configure import Configuration, SettingKeyNames
@@ -20,6 +23,7 @@ import os
 import subprocess
 import json
 import time
+import requests
 
 ensure_min_python_version()
 
@@ -35,6 +39,7 @@ class CouchbaseServerInstaller:
     __build: str
     __raw_version: str
     __ssh_keyfile: str
+    __ssh_keypass: Credential
 
     @staticmethod
     def version_to_code(version: str):
@@ -65,12 +70,13 @@ class CouchbaseServerInstaller:
 
         return "couchbase-server-enterprise-{}-{}-centos7.x86_64.rpm".format(version, build)
 
-    def __init__(self, url: str, ssh_keyfile: str):
+    def __init__(self, url: str, ssh_keyfile: str, keypass: Credential):
         self.__config = Configuration()
         self.__config.load()
         self.__raw_version = self.__config[SettingKeyNames.CBS_VERSION]
         self.__url = url
         self.__ssh_keyfile = ssh_keyfile
+        self.__ssh_keypass = keypass
         (self.__version, self.__build) = CouchbaseServerInstaller._parse_version(self.__raw_version)
 
     def download(self):
@@ -89,7 +95,7 @@ class CouchbaseServerInstaller:
         ssh_client = SSHClient()
         ssh_client.load_system_host_keys()
         ssh_client.set_missing_host_key_policy(WarningPolicy())
-        ssh_connect(ssh_client, self.__url, self.__ssh_keyfile)
+        ssh_connect(ssh_client, self.__url, self.__ssh_keyfile, str(self.__ssh_keypass))
         (_, stdout, _) = ssh_client.exec_command("test -f {}".format(filename))
         if stdout.channel.recv_exit_status() == 0:
             print("Install file already present on remote host, skipping upload...")
@@ -128,7 +134,11 @@ def _run_cli_command(command: List[str], prefix: str):
 def _start_cli_command(command: List[str]):
     path = Path(os.path.dirname(__file__)).absolute() / "couchbase-cli" / "couchbase-cli"
     command.insert(0, str(path))
-    return subprocess.Popen(command, stdout=PIPE, stderr=STDOUT)
+    if os.name == "nt":
+        print(Path(sys.executable).resolve())
+        command.insert(0, Path(sys.executable).resolve())
+
+    return subprocess.Popen(command, stdout=PIPE, stderr=STDOUT, env=os.environ)
 
 
 def initialize_couchbase_cluster(instance: AWSInstance, username: str, password: str):
@@ -289,9 +299,10 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if not args.setuponly:
+        keypass = Credential("SSH Key Password", None, str(CredentialName.CM_SSHKEY_PASS), args.keyname)
         with ThreadPoolExecutor(thread_name_prefix="cb_install") as tp:
             for instance in instances:
-                installer = CouchbaseServerInstaller(instance.address, args.sshkey)
+                installer = CouchbaseServerInstaller(instance.address, args.sshkey, keypass)
                 installer.download()  # Make sure only one does the downloading
                 futures.append(tp.submit(lambda i: i.install(), installer))
 

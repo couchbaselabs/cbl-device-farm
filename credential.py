@@ -15,6 +15,7 @@ except ImportError:
 
 class CredentialName(Enum):
     CM_CBS_PASS = "The administrator password for Couchbase Server instances"
+    CM_SSHKEY_PASS = "The password for the SSH key used to connect to EC2"
 
     def __str__(self):
         return self.name

@@ -1,9 +1,11 @@
 boto3
 couchbase
 packaging
-paramiko
+paramiko==2.8
 progressbar2
 tabulate
 termcolor
 troposphere
 wget
+urllib3
+requests
